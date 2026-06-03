@@ -104,34 +104,8 @@ data class Match(
 // ═══════════════════════════════════════════════════════
 // DATASETS
 // ═══════════════════════════════════════════════════════
-val SERIES_DATA = listOf(
-    Series(1, "مغامرات تشان تشاو", "Chan Chao Adventures", 12, "مترجم", "+16", "دراما", 2025, "كوريا", "يعرض الآن", 0xFF0D2E28, 12, 1863),
-    Series(2, "العناصر الأربعة للهواء", "Four Elements", 8, "مترجم", "+13", "فانتازيا", 2026, "أمريكا", "يعرض الآن", 0xFF0A2420, 8, 1240),
-    Series(3, "أفكار سيئة", "Bad Thoughts", 6, "مترجم", "+16", "تشويق وإثارة", 2025, "أمريكا", "يعرض الآن", 0xFF0E3320, 6, 2540),
-    Series(4, "المتعة القصوى المضمونة", "MPG Guaranteed", 2, "مترجم", "+16", "كوميديا", 2024, "ألمانيا", "مكتمل", 0xFF091E1A, 10, 320),
-    Series(5, "جيمس رودريغيز", "James Rodriguez", 3, "مترجم", "+13", "وثائقي", 2025, "إسبانيا", "يعرض الآن", 0xFF142E1A, 6, 876),
-    Series(6, "سكاي ميد", "SkyMed", 8, "مترجم", "+13", "دراما", 2024, "كندا", "مكتمل", 0xFF1A2E10, 8, 654),
-    Series(7, "ترنيمة الساموراي", "Samurai Chant", 2, "مترجم", "+16", "أكشن", 2025, "اليابان", "يعرض الآن", 0xFF1E280A, 12, 432),
-    Series(8, "ملف تعريفي مزيف", "Fake Profile", 10, "مترجم", "+16", "رومانسي", 2024, "كولومبيا", "مكتمل", 0xFF0A1E28, 10, 780),
-    Series(10, "الفرنساوي", "The Frenchman", 1, "أصلي", "+16", "دراما", 2026, "مصر", "يعرض الآن", 0xFF0E1A2E, 30, 2100),
-    Series(14, "ليل", "Layl", 1, "أصلي", "+16", "دراما", 2025, "لبنان", "يعرض الآن", 0xFF091E1A, 30, 1157, 
-        "يروي العمل قصة حب تجمع بين ابنة سفير ورجل فقير، تفرق بينهما الظروف، قبل أن يجتمعا مجدداً بعد سنوات ويتجدد حبهما."),
-    // Turkish Series (تركيا)
-    Series(20, "المؤسس عثمان", "Kurulus Osman", 15, "مترجم", "+13", "أكشن", 2025, "تركيا", "يعرض الآن", 0xFF351F10, 40, 3940, "تدور أحداث المسلسل حول الغازي عثمان بن أرطغرل مؤسس الدولة العثمانية."),
-    Series(21, "طائر الرفراف", "Yali Capkini", 21, "مترجم", "+16", "رومانسي", 2024, "تركيا", "مكتمل", 0xFF101B3A, 36, 1850, "قصة حب مليئة بالتحديات والمؤامرات الأسرية."),
-    Series(22, "حبات اللؤلؤ", "Inci Taneleri", 5, "مترجم", "+13", "دراما", 2025, "تركيا", "يعرض الآن", 0xFF1C2225, 20, 1205, "مسلسل تركي شيق مليء بالدراما الإنسانية."),
-    // Additional Arabic Series (عربية)
-    Series(11, "الحشاشين", "The Assassins", 30, "أصلي", "+16", "دراما", 2024, "مصر", "مكتمل", 0xFF103A15, 30, 4500, "طائفة الحشاشين وقائدها حسن الصباح."),
-    Series(12, "خيوط المعازيب", "Khyout Al Ma'azeeb", 6, "أصلي", "+13", "دراما", 2025, "السعودية", "يعرض الآن", 0xFF3C1F0A, 15, 2980, "دراما تراثية سعودية مميزة للغاية."),
-    Series(13, "سكة سفر 3", "Sikat Safar 3", 10, "أصلي", "+13", "كوميديا", 2025, "السعودية", "يعرض الآن", 0xFF2A2015, 30, 2220, "مغامرات كوميدية لثلاثة أشقاء في السعودية."),
-    // Asian Series (آسيوية)
-    Series(30, "لعبة الحبار 2", "Squid Game 2", 1, "مترجم", "+18", "تشويق وإثارة", 2026, "كوريا", "يعرض الآن", 0xFF4A0A2F, 9, 8700, "الموسم الثاني من اللعبة الأكثر إثارة وتشويقاً على الإطلاق."),
-    Series(31, "قدري أن أحبك", "Fated to Love You", 16, "مترجم", "+13", "رومانسي", 2024, "كوريا", "مكتمل", 0xFF2D1050, 20, 1540),
-    // Programs/Shows (برامج / وثائقي)
-    Series(40, "الدحيح - الموسم الجديد", "El Daheeh", 4, "أصلي", "الجميع", "وثائقي", 2025, "مصر", "يعرض الآن", 0xFF0A2B60, 24, 5210, "أحمد الغندور يسطر معلومات علمية ممتعة وأفكار استثنائية بطريقة مبسطة."),
-    Series(41, "سين 2", "Seen 2", 12, "أصلي", "الجميع", "وثائقي", 2024, "السعودية", "مكتمل", 0xFF023C3E, 30, 4390, "أحمد الشقيري يبحث عن حلول وممارسات مميزة حول العالم."),
-    Series(42, "قلبي اطمأن 8", "Qalby Etma'an 8", 2, "أصلي", "الجميع", "وثائقي", 2025, "الإمارات", "يعرض الآن", 0xFF4A340A, 30, 3100, "رحلة غيث لنشر الخير ومساعدة المحتاجين حول العالم العربي.")
-)
+val SERIES_DATA: List<Series>
+    get() = SoccerManager.getSeries()
 
 val CHANNELS_DATA = listOf(
     Channel(1, "beIN Sports MAX 1", "رياضة", 0xFF0A1A30, "bM1"),
@@ -158,7 +132,29 @@ val MATCHES_DATA = listOf(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Robust Global Crash Recovery System to secure testing & staging against any system crashes
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            android.util.Log.e("CrashHandler", "APP CRASH SUPPRESSED on thread: ${thread.name}", throwable)
+            try {
+                // If it's a critical main thread crash, gracefully restart the MainActivity to keep the app functional
+                if (thread.name == "main") {
+                    val intent = android.content.Intent(applicationContext, MainActivity::class.java).apply {
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                    }
+                    applicationContext.startActivity(intent)
+                }
+                // Terminate current crashed process cleanly
+                android.os.Process.killProcess(android.os.Process.myPid())
+                java.lang.System.exit(10)
+            } catch (e: Exception) {
+                android.os.Process.killProcess(android.os.Process.myPid())
+                java.lang.System.exit(10)
+            }
+        }
+
         SoccerManager.initialize(applicationContext)
+        MyFirebaseManager.initialize(applicationContext)
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
@@ -178,17 +174,26 @@ fun MainRouter() {
     var selectedSeries by remember { mutableStateOf<Series?>(null) }
     var watchData by remember { mutableStateOf<Pair<Series, Int>?>(null) }
 
-    // TMDB States & Variables
-    var tmdbApiKey by remember { mutableStateOf("84f183e20e8d6411ab1b80c108169123") }
-    var selectedTmdbWorkId by remember { mutableStateOf<Pair<String, Int>?>(null) }
-    var watchTmdbData by remember { mutableStateOf<Pair<TmdbWorkDetails, Int>?>(null) }
-
     // IPTV States
     var selectedIptvChannel by remember { mutableStateOf<IptvChannel?>(null) }
 
     // Unified live sport and admin configurations
     var selectedMatchId by remember { mutableStateOf<String?>(null) }
     var isAdminDashboardOpen by remember { mutableStateOf(false) }
+
+    // Firebase state observers
+    var firebaseUser by remember { mutableStateOf(MyFirebaseManager.getCurrentUser()) }
+    var loginDialogOpen by remember { mutableStateOf(false) }
+
+    if (loginDialogOpen) {
+        FirebaseLoginDialog(
+            onDismiss = { loginDialogOpen = false },
+            onLoginSuccess = {
+                firebaseUser = MyFirebaseManager.getCurrentUser()
+                loginDialogOpen = false
+            }
+        )
+    }
 
     if (!ready) {
         SplashScreen(onFinished = { ready = true })
@@ -204,8 +209,6 @@ fun MainRouter() {
                 )
             } else if (watchData != null) {
                 WatchPage(series = watchData!!.first, epNum = watchData!!.second, onBack = { watchData = null })
-            } else if (watchTmdbData != null) {
-                TmdbWatchPage(details = watchTmdbData!!.first, epNum = watchTmdbData!!.second, onBack = { watchTmdbData = null })
             } else if (selectedIptvChannel != null) {
                 IptvWatchPage(channel = selectedIptvChannel!!, onBack = { selectedIptvChannel = null })
             } else if (selectedSeries != null) {
@@ -213,14 +216,6 @@ fun MainRouter() {
                     series = selectedSeries!!,
                     onBack = { selectedSeries = null },
                     onWatch = { s, ep -> watchData = Pair(s, ep) }
-                )
-            } else if (selectedTmdbWorkId != null) {
-                TmdbDetailPage(
-                    mediaType = selectedTmdbWorkId!!.first,
-                    id = selectedTmdbWorkId!!.second,
-                    apiKey = tmdbApiKey,
-                    onBack = { selectedTmdbWorkId = null },
-                    onWatch = { details, ep -> watchTmdbData = Pair(details, ep) }
                 )
             } else {
                 Scaffold(
@@ -240,14 +235,16 @@ fun MainRouter() {
                             "channels" -> ChannelsScreen(onChannelSelect = { selectedIptvChannel = it })
                             "matches" -> MatchesScreen(
                                 onMatchSelect = { selectedMatchId = it },
-                                onOpenAdmin = { isAdminDashboardOpen = true }
+                                isAdmin = MyFirebaseManager.isEmailAdmin(firebaseUser?.email ?: ""),
+                                onOpenAdmin = {
+                                    if (MyFirebaseManager.isEmailAdmin(firebaseUser?.email ?: "")) {
+                                        isAdminDashboardOpen = true
+                                    } else {
+                                        loginDialogOpen = true
+                                    }
+                                }
                             )
                             "fav" -> FavoritesScreen(onSeriesSelect = { selectedSeries = it })
-                            "search" -> TmdbSearchScreen(
-                                apiKey = tmdbApiKey,
-                                onApiKeyChange = { tmdbApiKey = it },
-                                onWorkSelect = { type, id -> selectedTmdbWorkId = Pair(type, id) }
-                            )
                         }
                     }
                 }
@@ -259,7 +256,16 @@ fun MainRouter() {
                 enter = slideInHorizontally(initialOffsetX = { it }),
                 exit = slideOutHorizontally(targetOffsetX = { it })
             ) {
-                SidebarDrawer(onClose = { sidebarOpen = false })
+                SidebarDrawer(
+                    onClose = { sidebarOpen = false },
+                    currentUser = firebaseUser,
+                    onOpenLogin = { loginDialogOpen = true },
+                    onLogout = {
+                        MyFirebaseManager.logout()
+                        firebaseUser = null
+                        sidebarOpen = false
+                    }
+                )
             }
         }
     }
@@ -488,7 +494,12 @@ fun PosterSeriesCard(s: Series, onClick: () -> Unit) {
 // SIDEBAR DRAWER WIDGET
 // ═══════════════════════════════════════════════════════
 @Composable
-fun SidebarDrawer(onClose: () -> Unit) {
+fun SidebarDrawer(
+    onClose: () -> Unit,
+    currentUser: com.google.firebase.auth.FirebaseUser?,
+    onOpenLogin: () -> Unit,
+    onLogout: () -> Unit
+) {
     var darkTheme by remember { mutableStateOf(true) }
     var receiveNotifications by remember { mutableStateOf(true) }
 
@@ -522,27 +533,70 @@ fun SidebarDrawer(onClose: () -> Unit) {
             Spacer(modifier = Modifier.height(14.dp))
 
             // User Box Profile
-            Row(
-                modifier = Modifier
-                    .padding(horizontal = 14.dp)
-                    .fillMaxWidth()
-                    .background(CardColor, RoundedCornerShape(12.dp))
-                    .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
-                    .padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
+            if (currentUser != null) {
+                val isUserAdmin = MyFirebaseManager.isEmailAdmin(currentUser.email ?: "")
+                val initialChar = if (!currentUser.email.isNullOrEmpty()) currentUser.email!!.take(1).uppercase() else "⚽"
+                val displayName = currentUser.email ?: "مستخدم"
+                Row(
                     modifier = Modifier
-                        .size(44.dp)
-                        .background(Brush.linearGradient(listOf(TealColor, TealDeepColor)), CircleShape),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 14.dp)
+                        .fillMaxWidth()
+                        .background(CardColor, RoundedCornerShape(12.dp))
+                        .border(1.dp, if (isUserAdmin) TealLightColor else BorderColor, RoundedCornerShape(12.dp))
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("ض", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Brush.linearGradient(if (isUserAdmin) listOf(GoldColor, TealColor) else listOf(TealColor, TealDeepColor)), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(initialChar, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(displayName, color = TextPri, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (isUserAdmin) "مسؤول التطبيق 👑" else "مستخدم مسجل ⚽", color = if (isUserAdmin) TealLightColor else TextSec, fontSize = 10.sp)
+                    }
                 }
-                Spacer(modifier = Modifier.width(10.dp))
-                Column {
-                    Text("ضيف", color = TextPri, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                    Text("ID: #48291", color = TextSec, fontSize = 10.sp)
+
+                Spacer(modifier = Modifier.height(12.dp))
+                Box(modifier = Modifier.padding(horizontal = 14.dp)) {
+                    Button(
+                        onClick = onLogout,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(0.12f)),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().border(0.5.dp, Color.Red.copy(0.3f), RoundedCornerShape(10.dp)),
+                        contentPadding = PaddingValues(vertical = 8.dp)
+                    ) {
+                        Text("تسجيل الخروج 🔌", color = Color.Red, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .padding(horizontal = 14.dp)
+                        .fillMaxWidth()
+                        .background(CardColor, RoundedCornerShape(12.dp))
+                        .border(1.dp, BorderColor, RoundedCornerShape(12.dp))
+                        .clickable { onOpenLogin() }
+                        .padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .background(Brush.linearGradient(listOf(TealColor, TealDeepColor)), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("ض", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text("زائر (اضغط للدخول)", color = TextPri, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text("سجل حساباً أو ادخل كمسؤول 🔐", color = TealLightColor, fontSize = 10.sp)
+                    }
                 }
             }
 
@@ -630,7 +684,232 @@ fun SidebarDrawer(onClose: () -> Unit) {
 // ADVERTISING & SUB-ROW MODULES
 // ═══════════════════════════════════════════════════════
 @Composable
+fun PostimgImage(pageUrl: String, modifier: Modifier = Modifier) {
+    var resolvedUrl by remember { mutableStateOf<String?>(null) }
+    
+    val pageId = remember(pageUrl) {
+        val lastSegment = pageUrl.substringAfterLast("/")
+        if (lastSegment.contains("?")) lastSegment.substringBefore("?") else lastSegment
+    }
+
+    val candidates = remember(pageId) {
+        when (pageId) {
+            "0zKjT5Zb" -> listOf(
+                "https://i.postimg.cc/0zKjT5Zb/img-1780370969555.jpg",
+                "https://i.postimg.cc/0zKjT5Zb/img-1780370969555.png",
+                "https://i.postimg.cc/0zKjT5Zb/img_1780370969555.jpg",
+                "https://i.postimg.cc/0zKjT5Zb/img_1780370969555.png",
+                "https://i.postimg.cc/0zKjT5Zb/1780370969555.jpg",
+                "https://i.postimg.cc/0zKjT5Zb/1780370969555.png",
+                "https://i.postimg.cc/0zKjT5Zb/image.jpg",
+                "https://i.postimg.cc/0zKjT5Zb/image.png"
+            )
+            "TK88B0pv" -> listOf(
+                "https://i.postimg.cc/TK88B0pv/img-1780419118692.png",
+                "https://i.postimg.cc/TK88B0pv/img-1780419118692.jpg",
+                "https://i.postimg.cc/TK88B0pv/img_1780419118692.png",
+                "https://i.postimg.cc/TK88B0pv/img_1780419118692.jpg",
+                "https://i.postimg.cc/TK88B0pv/1780419118692.png",
+                "https://i.postimg.cc/TK88B0pv/1780419118692.jpg",
+                "https://i.postimg.cc/TK88B0pv/image.jpg"
+            )
+            "w1KKn27d" -> listOf(
+                "https://i.postimg.cc/w1KKn27d/img-1780419168404.png",
+                "https://i.postimg.cc/w1KKn27d/img-1780419168404.jpg",
+                "https://i.postimg.cc/w1KKn27d/img_1780419168404.png",
+                "https://i.postimg.cc/w1KKn27d/img_1780419168404.jpg",
+                "https://i.postimg.cc/w1KKn27d/1780419168404.png",
+                "https://i.postimg.cc/w1KKn27d/1780419168404.jpg",
+                "https://i.postimg.cc/w1KKn27d/image.jpg"
+            )
+            "sMFFbm1L" -> listOf(
+                "https://i.postimg.cc/sMFFbm1L/img-1780419206264.png",
+                "https://i.postimg.cc/sMFFbm1L/img-1780419206264.jpg",
+                "https://i.postimg.cc/sMFFbm1L/img_1780419206264.png",
+                "https://i.postimg.cc/sMFFbm1L/img_1780419206264.jpg",
+                "https://i.postimg.cc/sMFFbm1L/1780419206264.png",
+                "https://i.postimg.cc/sMFFbm1L/1780419206264.jpg",
+                "https://i.postimg.cc/sMFFbm1L/image.jpg"
+            )
+            "RWrr2dq8" -> listOf(
+                "https://i.postimg.cc/RWrr2dq8/img-1780419239021.png",
+                "https://i.postimg.cc/RWrr2dq8/img-1780419239021.jpg",
+                "https://i.postimg.cc/RWrr2dq8/img_1780419239021.png",
+                "https://i.postimg.cc/RWrr2dq8/img_1780419239021.jpg",
+                "https://i.postimg.cc/RWrr2dq8/1780419239021.png",
+                "https://i.postimg.cc/RWrr2dq8/1780419239021.jpg",
+                "https://i.postimg.cc/RWrr2dq8/image.jpg"
+            )
+            "FkXXkDm7" -> listOf(
+                "https://i.postimg.cc/FkXXkDm7/1000031594.jpg",
+                "https://i.postimg.cc/FkXXkDm7/1000031594.png",
+                "https://i.postimg.cc/FkXXkDm7/1000031594.jpeg"
+            )
+            "Cdg2DZkq" -> listOf(
+                "https://i.postimg.cc/Cdg2DZkq/1780370640536.png",
+                "https://i.postimg.cc/Cdg2DZkq/1780370640536.jpg",
+                "https://i.postimg.cc/Cdg2DZkq/1780370640536.jpeg"
+            )
+            else -> listOf(
+                "https://i.postimg.cc/$pageId/image.jpg",
+                "https://i.postimg.cc/$pageId/image.png",
+                "https://i.postimg.cc/$pageId/image.jpeg"
+            )
+        }
+    }
+
+    var currentCandidateIndex by remember(pageId) { mutableStateOf(0) }
+    var showFallback by remember(pageId) { mutableStateOf(false) }
+
+    LaunchedEffect(pageUrl) {
+        resolvedUrl = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            try {
+                val connection = java.net.URL(pageUrl).openConnection() as java.net.HttpURLConnection
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 4000
+                connection.readTimeout = 4000
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+                val html = connection.inputStream.bufferedReader().use { it.readText() }
+                
+                // Match og:image metatag
+                val ogMatch = Regex("""<meta\s+property=["']og:image["']\s+content=["'](https://i\.postimg\.cc/[^"']+)["']""").find(html)
+                if (ogMatch != null) {
+                    return@withContext ogMatch.groupValues[1]
+                }
+                
+                // Match Twitter image tag
+                val twitterMatch = Regex("""<meta\s+name=["']twitter:image["']\s+content=["'](https://i\.postimg\.cc/[^"']+)["']""").find(html)
+                if (twitterMatch != null) {
+                    return@withContext twitterMatch.groupValues[1]
+                }
+
+                // General match
+                val generalMatch = Regex("""https://i\.postimg\.cc/[a-zA-Z0-9_/-]+\.[a-zA-Z0-9_.-]+""").find(html)
+                if (generalMatch != null) {
+                    return@withContext generalMatch.value
+                }
+                
+                null
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
+        }
+    }
+
+    val modelToLoad = remember(resolvedUrl, candidates, currentCandidateIndex, showFallback) {
+        if (showFallback) {
+            ""
+        } else {
+            resolvedUrl ?: (candidates.getOrNull(currentCandidateIndex) ?: "")
+        }
+    }
+
+    if (showFallback) {
+        // Aesthetic Fallback VIP Banner Design
+        Box(
+            modifier = modifier
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(Color(0xFF1A120B), Color(0xFF3C2A21), Color(0xFF1A120B))
+                    )
+                )
+                .padding(18.dp)
+                .fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .background(
+                            Brush.linearGradient(listOf(GoldColor, Color(0xFFE5A93B))),
+                            shape = CircleShape
+                        )
+                        .border(1.dp, Color.White.copy(0.3f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("VIP", color = Color(0xFF1A120B), fontSize = 16.sp, fontWeight = FontWeight.Black)
+                }
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "اشترك في الباقة المميزة ⭐ VIP",
+                        color = GoldColor,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "مشاهدة لا محدودة بجودة 4K وبدون أي إعلانات!",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
+    } else {
+        AsyncImage(
+            model = modelToLoad,
+            contentDescription = "VIP Banner Image",
+            modifier = modifier,
+            contentScale = androidx.compose.ui.layout.ContentScale.FillWidth,
+            onError = {
+                if (resolvedUrl != null) {
+                    resolvedUrl = null
+                } else if (currentCandidateIndex < candidates.size - 1) {
+                    currentCandidateIndex++
+                } else {
+                    showFallback = true
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun SectionBanner(pageUrl: String) {
+    Box(
+        modifier = Modifier
+            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+    ) {
+        PostimgImage(
+            pageUrl = pageUrl,
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 100.dp, max = 220.dp)
+        )
+    }
+}
+
+@Composable
 fun AdBannerWidget(adIndex: Int) {
+    if (adIndex == 1) {
+        // بنر عربي - Arabic Banner (تم الحفظ بهذا الاسم والمكان لسهولة الوصول)
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(14.dp))
+        ) {
+            PostimgImage(
+                pageUrl = "https://postimg.cc/0zKjT5Zb",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 100.dp, max = 220.dp)
+            )
+        }
+        return
+    }
+
     val gradientColors = when (adIndex) {
         1 -> listOf(Color(0xFF1B0B2E), Color(0xFF4A148C))
         2 -> listOf(Color(0xFF071B20), Color(0xFF00796B))
@@ -968,9 +1247,9 @@ fun HomeScreen(
             PosterRow(items = SERIES_DATA.sortedByDescending { it.views }.take(8), onSeriesSelect = onSeriesSelect)
         }
 
-        // 4. بعدها مكان زي مربع اضع فيها تصميم اعلاني ال اي شي (إعلان 1)
+        // بنر قسم المسلسلات العربية
         item {
-            AdBannerWidget(adIndex = 1)
+            SectionBanner("https://postimg.cc/0zKjT5Zb")
         }
 
         // 5. قسم المسلسلات العربية
@@ -998,9 +1277,9 @@ fun HomeScreen(
             PosterRow(items = arabicAiring, onSeriesSelect = onSeriesSelect)
         }
 
-        // 6. بعدها مكان زي مربع اضع فيها تصميم اعلاني ال اي شي (إعلان 2)
+        // بنر قسم المسلسلات الأجنبية
         item {
-            AdBannerWidget(adIndex = 2)
+            SectionBanner("https://postimg.cc/TK88B0pv")
         }
 
         // 7. قسم المسلسلات الأجنبية
@@ -1023,9 +1302,9 @@ fun HomeScreen(
             PosterRow(items = foreignAiring, onSeriesSelect = onSeriesSelect)
         }
 
-        // 8. بعدها مكان زي مربع اضع فيها تصميم اعلاني ال اي شي (إعلان 3)
+        // بنر قسم المسلسلات التركية
         item {
-            AdBannerWidget(adIndex = 3)
+            SectionBanner("https://postimg.cc/w1KKn27d")
         }
 
         // 9. قسم المسلسلات التركية
@@ -1043,9 +1322,9 @@ fun HomeScreen(
             PosterRow(items = turkishAiring, onSeriesSelect = onSeriesSelect)
         }
 
-        // 10. بعدها مكان زي مربع اضع فيها تصميم اعلاني ال اي شي (إعلان 4)
+        // بنر قسم المسلسلات الآسيوية
         item {
-            AdBannerWidget(adIndex = 4)
+            SectionBanner("https://postimg.cc/sMFFbm1L")
         }
 
         // 11. قسم المسلسلات الآسيوية
@@ -1063,9 +1342,9 @@ fun HomeScreen(
             PosterRow(items = asianAiring, onSeriesSelect = onSeriesSelect)
         }
 
-        // 12. بعدها مكان زي مربع اضع فيها تصميم اعلاني ال اي شي (إعلان 5)
+        // بنر قسم البرامج التلفزيونية
         item {
-            AdBannerWidget(adIndex = 5)
+            SectionBanner("https://postimg.cc/RWrr2dq8")
         }
 
         // 13. قسم البرامج
@@ -1502,7 +1781,8 @@ fun SeriesCatalogScreen(onSeriesSelect: (Series) -> Unit) {
 @Composable
 fun MatchesScreen(
     onMatchSelect: (String) -> Unit,
-    onOpenAdmin: () -> Unit
+    onOpenAdmin: () -> Unit,
+    isAdmin: Boolean
 ) {
     var matchesList by remember { mutableStateOf(SoccerManager.getMatches()) }
     var selectedDate by remember { mutableStateOf("اليوم") }
@@ -1542,17 +1822,6 @@ fun MatchesScreen(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text("بث حي وتحديث لحظي للأحداث والنتائج ⚡", color = TextSec, fontSize = 10.sp)
                 }
-            }
-
-            // ADMIN CONTROL ACCESS BUTTON INSIDE MAIN BAR
-            Button(
-                onClick = onOpenAdmin,
-                colors = ButtonDefaults.buttonColors(containerColor = CardColor),
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.border(0.5.dp, BorderColor, RoundedCornerShape(8.dp)),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-            ) {
-                Text("المشرف 🔐", color = TealLightColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -2421,9 +2690,7 @@ fun BottomBar(activeTab: String, onTabSelect: (String) -> Unit) {
         Triple("home", "🏠", "الرئيسية"),
         Triple("series", "🎬", "المسلسلات"),
         Triple("channels", "📺", "القنوات"),
-        Triple("matches", "⚽", "المباريات"),
-        Triple("fav", "♥", "المفضلة"),
-        Triple("search", "🔍", "البحث الحي")
+        Triple("matches", "⚽", "المباريات")
     )
 
     Row(

@@ -6,11 +6,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.runtime.mutableStateOf
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.DocumentSnapshot
 
 object SoccerManager {
     private const val PREFS_NAME = "soccer_manager_prefs"
     private const val KEY_MATCHES = "saved_matches_json"
     private const val KEY_CHANNELS = "admin_channels_json"
+    private const val KEY_SERIES = "saved_series_json"
     private const val KEY_VOTES = "user_votes_json"
     private const val KEY_COMMENTS = "user_comments_json"
 
@@ -93,106 +97,243 @@ object SoccerManager {
         AdminChannel("ch_alkass1", "Al Kass HD 1 Qatari", "https://img.icons8.com/color/96/stadium.png", "https://live.alkass.net/alkass/alkass_one/playlist.m3u8")
     )
 
+    val matchesListState = mutableStateOf<List<MatchData>>(emptyList())
+    val adminChannelsState = mutableStateOf<List<AdminChannel>>(emptyList())
+    val seriesListState = mutableStateOf<List<Series>>(emptyList())
+    val pollVotesState = mutableStateOf<Map<String, Triple<Int, Int, Int>>>(emptyMap())
+    val matchCommentsState = mutableStateOf<Map<String, List<Triple<String, String, String>>>>(emptyMap())
+
     private val matchesList = mutableListOf<MatchData>()
     private val adminChannels = mutableListOf<AdminChannel>()
-    
-    // In-memory prediction vote stores: Map<MatchId, Triple<HomeVotes, DrawVotes, AwayVotes>>
+    private val seriesList = mutableListOf<Series>()
     private val pollVotes = mutableMapOf<String, Triple<Int, Int, Int>>()
-    
-    // In-memory comment lists: Map<MatchId, List<Triple<Author, CommentText, TimeAgo>>>
     private val matchComments = mutableMapOf<String, List<Triple<String, String, String>>>()
 
     fun initialize(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        
-        // 1. Load Admin Channels
-        val savedChannelsJson = prefs.getString(KEY_CHANNELS, null)
-        if (!savedChannelsJson.isNullOrEmpty()) {
-            try {
-                adminChannels.clear()
-                val arr = JSONArray(savedChannelsJson)
-                for (i in 0 until arr.length()) {
-                    val obj = arr.getJSONObject(i)
-                    adminChannels.add(
-                        AdminChannel(
-                            id = obj.getString("id"),
-                            name = obj.getString("name"),
-                            logoUrl = obj.optString("logoUrl", null),
-                            streamUrl = obj.getString("streamUrl"),
-                            category = obj.optString("category", "رياضة")
-                        )
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("SoccerManager", "Error parsing saved channels, restoring defaults", e)
-                restoreDefaultChannels()
-            }
-        } else {
-            restoreDefaultChannels()
-        }
+        val db = FirebaseFirestore.getInstance()
 
-        // 2. Load Matches
-        val savedMatchesJson = prefs.getString(KEY_MATCHES, null)
-        if (!savedMatchesJson.isNullOrEmpty()) {
-            try {
-                matchesList.clear()
-                val arr = JSONArray(savedMatchesJson)
-                for (i in 0 until arr.length()) {
-                    val obj = arr.getJSONObject(i)
-                    matchesList.add(parseMatchJsonObject(obj))
-                }
-            } catch (e: Exception) {
-                Log.e("SoccerManager", "Error parsing saved matches, restoring defaults", e)
-                restoreDefaultMatches()
+        // 1. Listen to Channels
+        db.collection("channels").addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("SoccerManager", "Error listening to channels", error)
+                return@addSnapshotListener
             }
-        } else {
-            restoreDefaultMatches()
-        }
-
-        // 3. Load Poll Votes
-        val savedVotesJson = prefs.getString(KEY_VOTES, null)
-        if (!savedVotesJson.isNullOrEmpty()) {
-            try {
-                val obj = JSONObject(savedVotesJson)
-                val keys = obj.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val tripleObj = obj.getJSONObject(key)
-                    pollVotes[key] = Triple(
-                        tripleObj.getInt("h"),
-                        tripleObj.getInt("d"),
-                        tripleObj.getInt("a")
-                    )
-                }
-            } catch (e: Exception) {
-                Log.e("SoccerManager", "Error loading votes", e)
-            }
-        }
-
-        // 4. Load Comments
-        val savedCommentsJson = prefs.getString(KEY_COMMENTS, null)
-        if (!savedCommentsJson.isNullOrEmpty()) {
-            try {
-                val obj = JSONObject(savedCommentsJson)
-                val keys = obj.keys()
-                while (keys.hasNext()) {
-                    val key = keys.next()
-                    val commentsArr = obj.getJSONArray(key)
-                    val cList = mutableListOf<Triple<String, String, String>>()
-                    for (i in 0 until commentsArr.length()) {
-                        val cObj = commentsArr.getJSONObject(i)
-                        cList.add(
-                            Triple(
-                                cObj.getString("author"),
-                                cObj.getString("text"),
-                                cObj.getString("time")
-                            )
-                        )
+            if (snapshot != null) {
+                if (snapshot.isEmpty) {
+                    // Seed defaults if empty
+                    for (ch in DEFAULT_CHANNELS) {
+                        saveChannel(context, ch)
                     }
-                    matchComments[key] = cList
+                } else {
+                    val channels = mutableListOf<AdminChannel>()
+                    for (doc in snapshot.documents) {
+                        try {
+                            channels.add(
+                                AdminChannel(
+                                    id = doc.id,
+                                    name = doc.getString("name") ?: "",
+                                    logoUrl = doc.getString("logoUrl"),
+                                    streamUrl = doc.getString("streamUrl") ?: "",
+                                    category = doc.getString("category") ?: "رياضة"
+                                )
+                            )
+                        } catch (e: Exception) {
+                            Log.e("SoccerManager", "Error parsing channel: ${doc.id}", e)
+                        }
+                    }
+                    adminChannels.clear()
+                    adminChannels.addAll(channels)
+                    adminChannelsState.value = adminChannels.toList()
                 }
-            } catch (e: Exception) {
-                Log.e("SoccerManager", "Error loading comments", e)
+            }
+        }
+
+        // 2. Listen to Matches
+        db.collection("matches").addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("SoccerManager", "Error listening to matches", error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                if (snapshot.isEmpty) {
+                    // Seed defaults if empty
+                    restoreDefaultMatches()
+                    for (m in matchesList) {
+                        saveMatch(context, m)
+                    }
+                } else {
+                    val matches = mutableListOf<MatchData>()
+                    for (doc in snapshot.documents) {
+                        try {
+                            val eventsList = mutableListOf<MatchEvent>()
+                            val rawEvents = doc.get("events")
+                            if (rawEvents is List<*>) {
+                                for (item in rawEvents) {
+                                    if (item is Map<*, *>) {
+                                        eventsList.add(
+                                            MatchEvent(
+                                                minute = (item["minute"] ?: "").toString(),
+                                                type = (item["type"] ?: "").toString(),
+                                                player = (item["player"] ?: "").toString(),
+                                                detail = (item["detail"] ?: "").toString()
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+                            val videosList = mutableListOf<MatchVideo>()
+                            val rawVideos = doc.get("videos")
+                            if (rawVideos is List<*>) {
+                                for (item in rawVideos) {
+                                    if (item is Map<*, *>) {
+                                        videosList.add(
+                                            MatchVideo(
+                                                title = (item["title"] ?: "").toString(),
+                                                description = (item["description"] ?: "").toString(),
+                                                duration = (item["duration"] ?: "").toString(),
+                                                tag = (item["tag"] ?: "").toString(),
+                                                views = (item["views"] ?: "").toString(),
+                                                timeAgo = (item["timeAgo"] ?: "").toString()
+                                            )
+                                        )
+                                    }
+                                }
+                            }
+
+                            matches.add(
+                                MatchData(
+                                    id = doc.id,
+                                    league = doc.getString("league") ?: "",
+                                    home = doc.getString("home") ?: "",
+                                    away = doc.getString("away") ?: "",
+                                    score = doc.getString("score") ?: "",
+                                    status = doc.getString("status") ?: "",
+                                    hf = doc.getString("hf") ?: "⚽",
+                                    af = doc.getString("af") ?: "⚽",
+                                    isLive = doc.getBoolean("isLive") ?: doc.getBoolean("live") ?: false,
+                                    ch = doc.getString("ch") ?: "",
+                                    homeLogo = doc.getString("homeLogo"),
+                                    awayLogo = doc.getString("awayLogo"),
+                                    elapsed = doc.getLong("elapsed")?.toInt() ?: 0,
+                                    round = doc.getString("round") ?: "",
+                                    date = doc.getString("date") ?: "",
+                                    time = doc.getString("time") ?: "",
+                                    stadium = doc.getString("stadium") ?: "",
+                                    referee = doc.getString("referee") ?: "",
+                                    commentator = doc.getString("commentator") ?: "",
+                                    hPen = doc.getLong("hPen")?.toInt() ?: -1,
+                                    aPen = doc.getLong("aPen")?.toInt() ?: -1,
+                                    streamUrlStr = doc.getString("streamUrlStr"),
+                                    events = eventsList,
+                                    videos = videosList
+                                )
+                            )
+                        } catch (e: Exception) {
+                            Log.e("SoccerManager", "Error parsing match: ${doc.id}", e)
+                        }
+                    }
+                    matchesList.clear()
+                    matchesList.addAll(matches)
+                    matchesListState.value = matchesList.toList()
+                }
+            }
+        }
+
+        // 3. Listen to Series
+        db.collection("series").addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("SoccerManager", "Error listening to series", error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                if (snapshot.isEmpty) {
+                    // Seed defaults if empty
+                    restoreDefaultSeries()
+                    for (s in seriesList) {
+                        saveSeries(context, s)
+                    }
+                } else {
+                    val series = mutableListOf<Series>()
+                    for (doc in snapshot.documents) {
+                        try {
+                            series.add(
+                                Series(
+                                    id = doc.getLong("id")?.toInt() ?: doc.id.toIntOrNull() ?: 0,
+                                    title = doc.getString("title") ?: "",
+                                    subTitle = doc.getString("subTitle") ?: doc.getString("subtitle") ?: "",
+                                    ep = doc.getLong("ep")?.toInt() ?: 1,
+                                    badge = doc.getString("badge") ?: "مترجم",
+                                    age = doc.getString("age") ?: "+13",
+                                    genre = doc.getString("genre") ?: "دراما",
+                                    year = doc.getLong("year")?.toInt() ?: 2026,
+                                    country = doc.getString("country") ?: "تركيا",
+                                    status = doc.getString("status") ?: "يعرض الآن",
+                                    col = doc.getLong("col") ?: 0xFF0D2E28L,
+                                    totalEps = doc.getLong("totalEps")?.toInt() ?: 10,
+                                    views = doc.getLong("views")?.toInt() ?: 0,
+                                    story = doc.getString("story") ?: ""
+                                )
+                            )
+                        } catch (e: Exception) {
+                            Log.e("SoccerManager", "Error parsing series: ${doc.id}", e)
+                        }
+                    }
+                    seriesList.clear()
+                    seriesList.addAll(series)
+                    seriesListState.value = seriesList.toList()
+                }
+            }
+        }
+
+        // 4. Listen to Votes
+        db.collection("votes").addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("SoccerManager", "Error listening to votes", error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val updatedMap = mutableMapOf<String, Triple<Int, Int, Int>>()
+                for (doc in snapshot.documents) {
+                    val h = doc.getLong("home")?.toInt() ?: 10
+                    val d = doc.getLong("draw")?.toInt() ?: 5
+                    val a = doc.getLong("away")?.toInt() ?: 8
+                    updatedMap[doc.id] = Triple(h, d, a)
+                }
+                pollVotes.clear()
+                pollVotes.putAll(updatedMap)
+                pollVotesState.value = pollVotes.toMap()
+            }
+        }
+
+        // 5. Listen to Comments
+        db.collection("comments").addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                Log.e("SoccerManager", "Error listening to comments", error)
+                return@addSnapshotListener
+            }
+            if (snapshot != null) {
+                val updatedMap = mutableMapOf<String, List<Triple<String, String, String>>>()
+                for (doc in snapshot.documents) {
+                    val list = mutableListOf<Triple<String, String, String>>()
+                    val rawList = doc.get("commentList")
+                    if (rawList is List<*>) {
+                        for (item in rawList) {
+                            if (item is Map<*, *>) {
+                                list.add(
+                                    Triple(
+                                        (item["author"] ?: "").toString(),
+                                        (item["text"] ?: "").toString(),
+                                        (item["time"] ?: "الآن").toString()
+                                    )
+                                )
+                            }
+                        }
+                    }
+                    updatedMap[doc.id] = list
+                }
+                matchComments.clear()
+                matchComments.putAll(updatedMap)
+                matchCommentsState.value = matchComments.toMap()
             }
         }
     }
@@ -200,6 +341,36 @@ object SoccerManager {
     private fun restoreDefaultChannels() {
         adminChannels.clear()
         adminChannels.addAll(DEFAULT_CHANNELS)
+    }
+
+    private fun restoreDefaultSeries() {
+        seriesList.clear()
+        seriesList.addAll(
+            listOf(
+                Series(1, "مغامرات تشان تشاو", "Chan Chao Adventures", 12, "مترجم", "+16", "دراما", 2025, "كوريا", "يعرض الآن", 0xFF0D2E28, 12, 1863),
+                Series(2, "العناصر الأربعة للهواء", "Four Elements", 8, "مترجم", "+13", "فانتازيا", 2026, "أمريكا", "يعرض الآن", 0xFF0A2420, 8, 1240),
+                Series(3, "أفكار سيئة", "Bad Thoughts", 6, "مترجم", "+16", "تشويق وإثارة", 2025, "أمريكا", "يعرض الآن", 0xFF0E3320, 6, 2540),
+                Series(4, "المتعة القصوى المضمونة", "MPG Guaranteed", 2, "مترجم", "+16", "كوميديا", 2024, "ألمانيا", "مكتمل", 0xFF091E1A, 10, 320),
+                Series(5, "جيمس رودريغيز", "James Rodriguez", 3, "مترجم", "+13", "وثائقي", 2025, "إسبانيا", "يعرض الآن", 0xFF142E1A, 6, 876),
+                Series(6, "سكاي ميد", "SkyMed", 8, "مترجم", "+13", "دراما", 2024, "كندا", "مكتمل", 0xFF1A2E10, 8, 654),
+                Series(7, "ترنيمة الساموراي", "Samurai Chant", 2, "مترجم", "+16", "أكشن", 2025, "اليابان", "يعرض الآن", 0xFF1E280A, 12, 432),
+                Series(8, "ملف تعريفي مزيف", "Fake Profile", 10, "مترجم", "+16", "رومانسي", 2024, "كولومبيا", "مكتمل", 0xFF0A1E28, 10, 780),
+                Series(10, "الفرنساوي", "The Frenchman", 1, "أصلي", "+16", "دراما", 2026, "مصر", "يعرض الآن", 0xFF0E1A2E, 30, 2100),
+                Series(14, "ليل", "Layl", 1, "أصلي", "+16", "دراما", 2025, "لبنان", "يعرض الآن", 0xFF091E1A, 30, 1157, 
+                    "يروي العمل قصة حب تجمع بين ابنة سفير ورجل فقير، تفرق بينهما الظروف، قبل أن يجتمعا مجدداً بعد سنوات ويتجدد حبهما."),
+                Series(20, "المؤسس عثمان", "Kurulus Osman", 15, "مترجم", "+13", "أكشن", 2025, "تركيا", "يعرض الآن", 0xFF351F10, 40, 3940, "تدور أحداث المسلسل حول الغازي عثمان بن أرطغرل مؤسس الدولة العثمانية."),
+                Series(21, "طائر الرفراف", "Yali Capkini", 21, "مترجم", "+16", "رومانسي", 2024, "تركيا", "مكتمل", 0xFF101B3A, 36, 1850, "قصة حب مليئة بالتحديات والمؤامرات الأسرية."),
+                Series(22, "حبات اللؤلؤ", "Inci Taneleri", 5, "مترجم", "+13", "دراما", 2025, "تركيا", "يعرض الآن", 0xFF1C2225, 20, 1205, "مسلسل تركي شيق مليء بالدراما الإنسانية."),
+                Series(11, "الحشاشين", "The Assassins", 30, "أصلي", "+16", "دراما", 2024, "مصر", "مكتمل", 0xFF103A15, 30, 4500, "طائفة الحشاشين وقائدها حسن الصباح."),
+                Series(12, "خيوط المعازيب", "Khyout Al Ma'azeeb", 6, "أصلي", "+13", "دراما", 2025, "السعودية", "يعرض الآن", 0xFF3C1F0A, 15, 2980, "دراما تراثية سعودية مميزة للغاية."),
+                Series(13, "سكة سفر 3", "Sikat Safar 3", 10, "أصلي", "+13", "كوميديا", 2025, "السعودية", "يعرض الآن", 0xFF2A2015, 30, 2220, "مغامرات كوميدية لثلاثة أشقاء في السعودية."),
+                Series(30, "لعبة الحبار 2", "Squid Game 2", 1, "مترجم", "+18", "تشويق وإثارة", 2026, "كوريا", "يعرض الآن", 0xFF4A0A2F, 9, 8700, "الموسم الثاني من اللعبة الأكثر إثارة وتشويقاً على الإطلاق."),
+                Series(31, "قدري أن أحبك", "Fated to Love You", 16, "مترجم", "+13", "رومانسي", 2024, "كوريا", "مكتمل", 0xFF2D1050, 20, 1540),
+                Series(40, "الدحيح - الموسم الجديد", "El Daheeh", 4, "أصلي", "الجميع", "وثائقي", 2025, "مصر", "يعرض الآن", 0xFF0A2B60, 24, 5210, "أحمد الغندور يسطر معلومات علمية ممتعة وأفكار استثنائية بطريقة مبسطة."),
+                Series(41, "سين 2", "Seen 2", 12, "أصلي", "الجميع", "وثائقي", 2024, "السعودية", "مكتمل", 0xFF023C3E, 30, 4390, "أحمد الشقيري يبحث عن حلول وممارسات مميزة حول العالم."),
+                Series(42, "قلبي اطمأن 8", "Qalby Etma'an 8", 2, "أصلي", "الجميع", "وثائقي", 2025, "الإمارات", "يعرض الآن", 0xFF4A340A, 30, 3100, "رحلة غيث لنشر الخير ومساعدة المحتاجين حول العالم العربي.")
+            )
+        )
     }
 
     private fun restoreDefaultMatches() {
@@ -619,73 +790,234 @@ object SoccerManager {
         prefs.edit().putString(KEY_COMMENTS, obj.toString()).apply()
     }
 
+    private fun serializeSeries(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val arr = JSONArray()
+        for (s in seriesList) {
+            val obj = JSONObject()
+            obj.put("id", s.id)
+            obj.put("title", s.title)
+            obj.put("subTitle", s.subTitle)
+            obj.put("ep", s.ep)
+            obj.put("badge", s.badge)
+            obj.put("age", s.age)
+            obj.put("genre", s.genre)
+            obj.put("year", s.year)
+            obj.put("country", s.country)
+            obj.put("status", s.status)
+            obj.put("col", s.col)
+            obj.put("totalEps", s.totalEps)
+            obj.put("views", s.views)
+            obj.put("story", s.story)
+            arr.put(obj)
+        }
+        prefs.edit().putString(KEY_SERIES, arr.toString()).apply()
+    }
+
     // --- API & READ-WRITE API HOOKS ---
     
+    fun getSeries(): List<Series> {
+        return seriesListState.value
+    }
+
+    fun saveSeries(context: Context, item: Series) {
+        try {
+            val db = FirebaseFirestore.getInstance()
+            val map = hashMapOf(
+                "id" to item.id,
+                "title" to item.title,
+                "subTitle" to item.subTitle,
+                "ep" to item.ep,
+                "badge" to item.badge,
+                "age" to item.age,
+                "genre" to item.genre,
+                "year" to item.year,
+                "country" to item.country,
+                "status" to item.status,
+                "col" to item.col,
+                "totalEps" to item.totalEps,
+                "views" to item.views,
+                "story" to item.story,
+                "sorting_date" to System.currentTimeMillis().toString()
+            )
+            db.collection("series").document(item.id.toString()).set(map)
+        } catch (e: Exception) {
+            Log.e("SoccerManager", "Error saving series to Firestore", e)
+        }
+        val list = seriesListState.value.toMutableList()
+        val idx = list.indexOfFirst { it.id == item.id }
+        if (idx != -1) {
+            list[idx] = item
+        } else {
+            list.add(item)
+        }
+        seriesListState.value = list
+    }
+
+    fun deleteSeries(context: Context, id: Int) {
+        try {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("series").document(id.toString()).delete()
+        } catch (e: Exception) {
+            Log.e("SoccerManager", "Error deleting series", e)
+        }
+        val list = seriesListState.value.toMutableList()
+        list.removeAll { it.id == id }
+        seriesListState.value = list
+    }
+    
     fun getMatches(): List<MatchData> {
-        return matchesList.toList()
+        return matchesListState.value
     }
 
     fun getChannels(): List<AdminChannel> {
-        return adminChannels.toList()
+        return adminChannelsState.value
     }
 
     fun saveChannel(context: Context, channel: AdminChannel) {
-        val idx = adminChannels.indexOfFirst { it.id == channel.id }
-        if (idx != -1) {
-            adminChannels[idx] = channel
-        } else {
-            adminChannels.add(channel)
+        try {
+            val db = FirebaseFirestore.getInstance()
+            val map = hashMapOf(
+                "id" to channel.id,
+                "name" to channel.name,
+                "logoUrl" to channel.logoUrl,
+                "streamUrl" to channel.streamUrl,
+                "category" to channel.category
+            )
+            db.collection("channels").document(channel.id).set(map)
+        } catch (e: Exception) {
+            Log.e("SoccerManager", "Error saving channel to Firestore", e)
         }
-        serializeChannels(context)
+        val list = adminChannelsState.value.toMutableList()
+        val idx = list.indexOfFirst { it.id == channel.id }
+        if (idx != -1) {
+            list[idx] = channel
+        } else {
+            list.add(channel)
+        }
+        adminChannelsState.value = list
     }
 
     fun deleteChannel(context: Context, channelId: String) {
-        adminChannels.removeAll { it.id == channelId }
-        serializeChannels(context)
+        try {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("channels").document(channelId).delete()
+        } catch (e: Exception) {
+            Log.e("SoccerManager", "Error deleting channel", e)
+        }
+        val list = adminChannelsState.value.toMutableList()
+        list.removeAll { it.id == channelId }
+        adminChannelsState.value = list
     }
 
     fun saveMatch(context: Context, match: MatchData) {
-        val idx = matchesList.indexOfFirst { it.id == match.id }
-        if (idx != -1) {
-            matchesList[idx] = match
-        } else {
-            matchesList.add(match)
+        try {
+            val db = FirebaseFirestore.getInstance()
+            val eventsMapList = match.events.map {
+                mapOf("minute" to it.minute, "type" to it.type, "player" to it.player, "detail" to it.detail)
+            }
+            val videosMapList = match.videos.map {
+                mapOf("title" to it.title, "description" to it.description, "duration" to it.duration, "tag" to it.tag, "views" to it.views, "timeAgo" to it.timeAgo)
+            }
+            val map = hashMapOf(
+                "id" to match.id,
+                "league" to match.league,
+                "home" to match.home,
+                "away" to match.away,
+                "score" to match.score,
+                "status" to match.status,
+                "hf" to match.hf,
+                "af" to match.af,
+                "isLive" to match.isLive,
+                "ch" to match.ch,
+                "homeLogo" to match.homeLogo,
+                "awayLogo" to match.awayLogo,
+                "elapsed" to match.elapsed,
+                "round" to match.round,
+                "date" to match.date,
+                "time" to match.time,
+                "stadium" to match.stadium,
+                "referee" to match.referee,
+                "commentator" to match.commentator,
+                "hPen" to match.hPen,
+                "aPen" to match.aPen,
+                "streamUrlStr" to match.streamUrlStr,
+                "events" to eventsMapList,
+                "videos" to videosMapList
+            )
+            db.collection("matches").document(match.id).set(map)
+        } catch (e: Exception) {
+            Log.e("SoccerManager", "Error saving match to Firestore", e)
         }
-        serializeMatches(context)
+        val list = matchesListState.value.toMutableList()
+        val idx = list.indexOfFirst { it.id == match.id }
+        if (idx != -1) {
+            list[idx] = match
+        } else {
+            list.add(match)
+        }
+        matchesListState.value = list
     }
 
     fun deleteMatch(context: Context, matchId: String) {
-        matchesList.removeAll { it.id == matchId }
-        serializeMatches(context)
+        try {
+            val db = FirebaseFirestore.getInstance()
+            db.collection("matches").document(matchId).delete()
+        } catch (e: Exception) {
+            Log.e("SoccerManager", "Error deleting match", e)
+        }
+        val list = matchesListState.value.toMutableList()
+        list.removeAll { it.id == matchId }
+        matchesListState.value = list
     }
 
     fun resetAllData(context: Context) {
         restoreDefaultChannels()
+        for (ch in DEFAULT_CHANNELS) {
+            saveChannel(context, ch)
+        }
         restoreDefaultMatches()
-        pollVotes.clear()
-        matchComments.clear()
-        
-        serializeMatches(context)
-        serializeChannels(context)
-        serializeVotes(context)
-        serializeComments(context)
+        for (m in matchesList) {
+            saveMatch(context, m)
+        }
+        restoreDefaultSeries()
+        for (s in seriesList) {
+            saveSeries(context, s)
+        }
     }
 
     // --- Dynamic User Actions ---
 
     fun getCommentsForMatch(matchId: String): List<Triple<String, String, String>> {
-        return matchComments[matchId] ?: emptyList()
+        return matchCommentsState.value[matchId] ?: emptyList()
     }
 
     fun addCommentToMatch(context: Context, matchId: String, author: String, text: String) {
-        val current = (matchComments[matchId] ?: emptyList()).toMutableList()
+        val current = (getCommentsForMatch(matchId)).toMutableList()
         current.add(0, Triple(author, text, "الآن"))
-        matchComments[matchId] = current
-        serializeComments(context)
+        try {
+            val db = FirebaseFirestore.getInstance()
+            val listMap = current.map {
+                mapOf(
+                    "author" to it.first,
+                    "text" to it.second,
+                    "time" to it.third
+                )
+            }
+            val map = hashMapOf(
+                "commentList" to listMap
+            )
+            db.collection("comments").document(matchId).set(map)
+        } catch (e: Exception) {
+            Log.e("SoccerManager", "Error saving comment to Firestore", e)
+        }
+        val map = matchCommentsState.value.toMutableMap()
+        map[matchId] = current
+        matchCommentsState.value = map
     }
 
     fun getVotesForMatch(matchId: String): Triple<Int, Int, Int> {
-        return pollVotes[matchId] ?: Triple(10, 5, 8)
+        return pollVotesState.value[matchId] ?: Triple(10, 5, 8)
     }
 
     fun voteForMatch(context: Context, matchId: String, choice: String) {
@@ -696,7 +1028,19 @@ object SoccerManager {
             "away" -> Triple(current.first, current.second, current.third + 1)
             else -> current
         }
-        pollVotes[matchId] = updated
-        serializeVotes(context)
+        try {
+            val db = FirebaseFirestore.getInstance()
+            val map = hashMapOf(
+                "home" to updated.first,
+                "draw" to updated.second,
+                "away" to updated.third
+            )
+            db.collection("votes").document(matchId).set(map)
+        } catch (e: Exception) {
+            Log.e("SoccerManager", "Error saving votes to Firestore", e)
+        }
+        val map = pollVotesState.value.toMutableMap()
+        map[matchId] = updated
+        pollVotesState.value = map
     }
 }

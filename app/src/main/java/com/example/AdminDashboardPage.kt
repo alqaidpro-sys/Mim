@@ -30,11 +30,12 @@ fun AdminDashboardPage(
     onBack: () -> Unit
 ) {
     val context = LocalContext.current
-    var activeSubSection by remember { mutableStateOf("matches") } // "matches" or "channels" or "simulator"
+    var activeSubSection by remember { mutableStateOf("matches") } // "matches" or "channels" or "simulator" or "series"
 
     // Refreshed lists
     var matchesList by remember { mutableStateOf(SoccerManager.getMatches()) }
     var channelsList by remember { mutableStateOf(SoccerManager.getChannels()) }
+    var seriesList by remember { mutableStateOf(SoccerManager.getSeries()) }
 
     // Dialog Control For Adding/Editing Matches
     var showMatchDialog by remember { mutableStateOf(false) }
@@ -43,6 +44,10 @@ fun AdminDashboardPage(
     // Dialog Control For Channels
     var showChannelDialog by remember { mutableStateOf(false) }
     var editingChannel by remember { mutableStateOf<SoccerManager.AdminChannel?>(null) }
+
+    // Dialog Control For Series
+    var showSeriesDialog by remember { mutableStateOf(false) }
+    var editingSeries by remember { mutableStateOf<Series?>(null) }
 
     // State Variables for Match Inputs
     var mLeague by remember { mutableStateOf("") }
@@ -68,10 +73,25 @@ fun AdminDashboardPage(
     var cStreamUrl by remember { mutableStateOf("") }
     var cCategory by remember { mutableStateOf("رياضة") }
 
+    // State Variables for Series Inputs
+    var sTitle by remember { mutableStateOf("") }
+    var sSubTitle by remember { mutableStateOf("") }
+    var sEp by remember { mutableStateOf(1) }
+    var sBadge by remember { mutableStateOf("مترجم") }
+    var sAge by remember { mutableStateOf("+13") }
+    var sGenre by remember { mutableStateOf("دراما") }
+    var sYear by remember { mutableStateOf(2026) }
+    var sCountry by remember { mutableStateOf("تركيا") }
+    var sStatus by remember { mutableStateOf("يعرض الآن") }
+    var sTotalEps by remember { mutableStateOf(10) }
+    var sViews by remember { mutableStateOf(100) }
+    var sStory by remember { mutableStateOf("") }
+
     // Re-sync lists from persistence
     fun refreshData() {
         matchesList = SoccerManager.getMatches()
         channelsList = SoccerManager.getChannels()
+        seriesList = SoccerManager.getSeries()
     }
 
     Box(
@@ -150,23 +170,24 @@ fun AdminDashboardPage(
                     .fillMaxWidth()
                     .padding(horizontal = 14.dp, vertical = 6.dp)
                     .background(CardDeepColor, RoundedCornerShape(12.dp))
+                    .horizontalScroll(rememberScrollState())
                     .padding(4.dp)
             ) {
                 val subTabs = listOf(
                     Triple("matches", "⚽ المباريات", "إدارة مباريات الدوري والبطولات"),
                     Triple("channels", "📺 قنوات البث", "تعديل وإضافة قنوات IPTV"),
+                    Triple("series", "🎬 الأفلام والمسلسلات", "إدارة الأفلام والمسلسلات"),
                     Triple("simulator", "⚡ المحاكي", "محاكاة وتسجيل الأهداف")
                 )
                 subTabs.forEach { (key, lbl, desc) ->
                     val isSelected = activeSubSection == key
                     Box(
                         modifier = Modifier
-                            .weight(1f)
                             .clip(RoundedCornerShape(8.dp))
                             .background(if (isSelected) CardColor else Color.Transparent)
                             .border(0.5.dp, if (isSelected) BorderColor else Color.Transparent, RoundedCornerShape(8.dp))
                             .clickable { activeSubSection = key }
-                            .padding(vertical = 10.dp),
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(lbl, color = if (isSelected) TealLightColor else TextSec, fontSize = 12.sp, fontWeight = FontWeight.Bold)
@@ -367,6 +388,108 @@ fun AdminDashboardPage(
                                             IconButton(
                                                 onClick = {
                                                     SoccerManager.deleteChannel(context, ch.id)
+                                                    refreshData()
+                                                }
+                                            ) {
+                                                Icon(imageVector = Icons.Default.Delete, contentDescription = "حذف", tint = Color.Red, modifier = Modifier.size(18.dp))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    "series" -> {
+                        Column {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("إدارة الأفلام والمسلسلات بقاعدة البيانات", color = TextPri, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Button(
+                                    onClick = {
+                                        editingSeries = null
+                                        sTitle = ""
+                                        sSubTitle = ""
+                                        sEp = 1
+                                        sBadge = "مترجم"
+                                        sAge = "+13"
+                                        sGenre = "دراما"
+                                        sYear = 2026
+                                        sCountry = "تركيا"
+                                        sStatus = "يعرض الآن"
+                                        sTotalEps = 10
+                                        sViews = 100
+                                        sStory = ""
+                                        showSeriesDialog = true
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = TealColor),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                                ) {
+                                    Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("مسلسل / فيلم جديد", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                items(seriesList) { s ->
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(CardColor, RoundedCornerShape(12.dp))
+                                            .border(0.5.dp, BorderColor, RoundedCornerShape(12.dp))
+                                            .padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .background(Color.White.copy(0.04f), CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("🎬", fontSize = 18.sp)
+                                        }
+                                        Spacer(modifier = Modifier.width(10.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(s.title, color = TextPri, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                            Text("${s.country} • ${s.genre} • سنة ${s.year} • (${s.status})", color = TextSec, fontSize = 10.sp)
+                                            Text("${s.badge} • دفعة ${s.ep} حلقة • المشاهدات: ${s.views}", color = TealLightColor, fontSize = 10.sp)
+                                        }
+
+                                        Row {
+                                            IconButton(
+                                                onClick = {
+                                                    editingSeries = s
+                                                    sTitle = s.title
+                                                    sSubTitle = s.subTitle
+                                                    sEp = s.ep
+                                                    sBadge = s.badge
+                                                    sAge = s.age
+                                                    sGenre = s.genre
+                                                    sYear = s.year
+                                                    sCountry = s.country
+                                                    sStatus = s.status
+                                                    sTotalEps = s.totalEps
+                                                    sViews = s.views
+                                                    sStory = s.story
+                                                    showSeriesDialog = true
+                                                }
+                                            ) {
+                                                Icon(imageVector = Icons.Default.Edit, contentDescription = "تعديل", tint = GoldColor, modifier = Modifier.size(18.dp))
+                                            }
+                                            IconButton(
+                                                onClick = {
+                                                    SoccerManager.deleteSeries(context, s.id)
                                                     refreshData()
                                                 }
                                             ) {
@@ -720,6 +843,219 @@ fun AdminDashboardPage(
                 },
                 dismissButton = {
                     TextButton(onClick = { showChannelDialog = false }) { Text("إلغاء") }
+                },
+                containerColor = CardColor
+            )
+        }
+
+        // --- SERIES DIALOG ---
+        if (showSeriesDialog) {
+            AlertDialog(
+                onDismissRequest = { showSeriesDialog = false },
+                title = { Text(if (editingSeries == null) "إضافة مسلسل / فيلم جديد" else "تعديل تفاصيل المسلسل / الفيلم", color = TextPri, fontWeight = FontWeight.Bold, fontSize = 16.sp) },
+                text = {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedTextField(
+                            value = sTitle,
+                            onValueChange = { sTitle = it },
+                            label = { Text("عنوان العمل (بالعربية)", fontSize = 11.sp) },
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TealColor, focusedTextColor = TextPri, unfocusedTextColor = TextPri),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        OutlinedTextField(
+                            value = sSubTitle,
+                            onValueChange = { sSubTitle = it },
+                            label = { Text("العنوان الفرعي أو الأصلي (إنجليزي)", fontSize = 11.sp) },
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TealColor, focusedTextColor = TextPri, unfocusedTextColor = TextPri),
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        // Badge: مترجم vs أصلي
+                        Text("النوع البرمجي (شارة)", color = TextSec, fontSize = 11.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("مترجم", "أصلي").forEach { b ->
+                                val active = sBadge == b
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (active) TealDeepColor else CardDeepColor)
+                                        .border(0.5.dp, if (active) TealColor else BorderColor, RoundedCornerShape(6.dp))
+                                        .clickable { sBadge = b }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(b, color = if (active) TealLightColor else TextPri, fontSize = 11.sp)
+                                }
+                            }
+                        }
+
+                        // Status: يعرض الآن vs مكتمل
+                        Text("حالة العرض والإنتاج", color = TextSec, fontSize = 11.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("يعرض الآن", "مكتمل").forEach { st ->
+                                val active = sStatus == st
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (active) TealDeepColor else CardDeepColor)
+                                        .border(0.5.dp, if (active) TealColor else BorderColor, RoundedCornerShape(6.dp))
+                                        .clickable { sStatus = st }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(st, color = if (active) TealLightColor else TextPri, fontSize = 11.sp)
+                                }
+                            }
+                        }
+
+                        // Inputs for numbers: year, current ep, total eps, views
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = sYear.toString(),
+                                onValueChange = { sYear = it.toIntOrNull() ?: 2026 },
+                                label = { Text("عام الإنتاج", fontSize = 10.sp) },
+                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TealColor, focusedTextColor = TextPri, unfocusedTextColor = TextPri),
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = sViews.toString(),
+                                onValueChange = { sViews = it.toIntOrNull() ?: 0 },
+                                label = { Text("عدد المشاهدات", fontSize = 10.sp) },
+                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TealColor, focusedTextColor = TextPri, unfocusedTextColor = TextPri),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedTextField(
+                                value = sEp.toString(),
+                                onValueChange = { sEp = it.toIntOrNull() ?: 1 },
+                                label = { Text("الحلقة المتاحة", fontSize = 10.sp) },
+                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TealColor, focusedTextColor = TextPri, unfocusedTextColor = TextPri),
+                                modifier = Modifier.weight(1f)
+                            )
+                            OutlinedTextField(
+                                value = sTotalEps.toString(),
+                                onValueChange = { sTotalEps = it.toIntOrNull() ?: 10 },
+                                label = { Text("إجمالي الحلقات", fontSize = 10.sp) },
+                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TealColor, focusedTextColor = TextPri, unfocusedTextColor = TextPri),
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+
+                        // Genres selector
+                        Text("تصنيف المحتوى (النوع)", color = TextSec, fontSize = 11.sp)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("أكشن", "دراما", "فانتازيا", "تشويق وإثارة", "كوميديا", "وثائقي", "رومانسي").forEach { g ->
+                                val active = sGenre == g
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (active) TealDeepColor else CardDeepColor)
+                                        .border(0.5.dp, if (active) TealColor else BorderColor, RoundedCornerShape(6.dp))
+                                        .clickable { sGenre = g }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(g, color = if (active) TealLightColor else TextPri, fontSize = 10.sp)
+                                }
+                            }
+                        }
+
+                        // Countries selector
+                        Text("دولة الإنتاج (تحدد القسم بالصفحة الرئيسية)", color = TextSec, fontSize = 11.sp)
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("مصر", "تركيا", "كوريا", "أمريكا", "السعودية", "الإمارات", "لبنان", "إسبانيا", "اليابان").forEach { c ->
+                                val active = sCountry == c
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (active) TealDeepColor else CardDeepColor)
+                                        .border(0.5.dp, if (active) TealColor else BorderColor, RoundedCornerShape(6.dp))
+                                        .clickable { sCountry = c }
+                                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(c, color = if (active) TealLightColor else TextPri, fontSize = 10.sp)
+                                }
+                            }
+                        }
+
+                        // Age selector
+                        Text("الفئة العمرية مناسبة لـ", color = TextSec, fontSize = 11.sp)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf("الجميع", "+13", "+16", "+18").forEach { a ->
+                                val active = sAge == a
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(if (active) TealDeepColor else CardDeepColor)
+                                        .border(0.5.dp, if (active) TealColor else BorderColor, RoundedCornerShape(6.dp))
+                                        .clickable { sAge = a }
+                                        .padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(a, color = if (active) TealLightColor else TextPri, fontSize = 10.sp)
+                                }
+                            }
+                        }
+
+                        OutlinedTextField(
+                            value = sStory,
+                            onValueChange = { sStory = it },
+                            label = { Text("قصة الفيلم / المسلسل (تفاصيل)", fontSize = 11.sp) },
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TealColor, focusedTextColor = TextPri, unfocusedTextColor = TextPri),
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 4
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val id = editingSeries?.id ?: ((System.currentTimeMillis() % 100000).toInt() + 10000)
+                            val colVal = when (sCountry) {
+                                "مصر" -> 0xFF0E1A2E
+                                "تركيا" -> 0xFF351F10
+                                "كوريا" -> 0xFF4A0A2F
+                                "أمريكا" -> 0xFF0E3320
+                                else -> 0xFF0D2E28
+                            }
+                            val newSer = Series(
+                                id = id,
+                                title = sTitle,
+                                subTitle = sSubTitle,
+                                ep = sEp,
+                                badge = sBadge,
+                                age = sAge,
+                                genre = sGenre,
+                                year = sYear,
+                                country = sCountry,
+                                status = sStatus,
+                                col = colVal,
+                                totalEps = sTotalEps,
+                                views = sViews,
+                                story = sStory
+                            )
+                            SoccerManager.saveSeries(context, newSer)
+                            refreshData()
+                            showSeriesDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = TealColor)
+                    ) {
+                        Text("حفظ الفيلم / المسلسل")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSeriesDialog = false }) { Text("إلغاء") }
                 },
                 containerColor = CardColor
             )
