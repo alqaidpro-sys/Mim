@@ -115,6 +115,10 @@ val SERIES_DATA: List<Series>
 // MAIN COMPONENT & EDGE-TO-EDGE
 // ═══════════════════════════════════════════════════════
 class MainActivity : ComponentActivity() {
+    companion object {
+        private val launchTime = System.currentTimeMillis()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
@@ -122,8 +126,8 @@ class MainActivity : ComponentActivity() {
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             android.util.Log.e("CrashHandler", "APP CRASH SUPPRESSED on thread: ${thread.name}", throwable)
             try {
-                // If it's a critical main thread crash, gracefully restart the MainActivity to keep the app functional
-                if (thread.name == "main") {
+                // If it's a critical main thread crash and we have been running for at least 5s, gracefully restart
+                if (thread.name == "main" && (System.currentTimeMillis() - launchTime > 5000)) {
                     val intent = android.content.Intent(applicationContext, MainActivity::class.java).apply {
                         addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK)
                     }

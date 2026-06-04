@@ -110,9 +110,10 @@ object SoccerManager {
     private val matchComments = mutableMapOf<String, List<Triple<String, String, String>>>()
 
     fun initialize(context: Context) {
-        val db = FirebaseFirestore.getInstance()
+        try {
+            val db = FirebaseFirestore.getInstance()
 
-        // 1. Listen to Channels
+            // 1. Listen to Channels
         db.collection("channels").addSnapshotListener { snapshot, error ->
             if (error != null) {
                 Log.e("SoccerManager", "Error listening to channels", error)
@@ -340,6 +341,9 @@ object SoccerManager {
                 matchComments.putAll(updatedMap)
                 matchCommentsState.value = matchComments.toMap()
             }
+        }
+        } catch (e: Exception) {
+            Log.e("SoccerManager", "Error initializing Firebase listeners", e)
         }
     }
 
