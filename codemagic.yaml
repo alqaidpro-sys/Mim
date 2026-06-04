@@ -7,8 +7,8 @@ workflows:
       events:
         - push
     scripts:
-      - name: Install Gradle Wrapper
-        script: gradle wrapper
+      - name: Install Correct Gradle Wrapper
+        script: gradle wrapper --gradle-version 9.3.1
       - name: Set up local properties
         script: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
       - name: Build Android Debug APK
