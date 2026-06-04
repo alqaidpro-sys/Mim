@@ -34,73 +34,24 @@ class IptvService {
     }
 
     /**
-     * جلب وتحليل قنوات البث المباشر العربية من iptv-org بشكل متدفق ومحمي للذاكرة (Line-by-Line BufferedReader).
+     * جلب وتحليل قنوات البث المباشر العربية كبيانات محلية بدون استدعاءات خارجية (IPTV-Org) كـ Fallback فقط.
      */
     suspend fun fetchAndParseArabicM3u(): List<IptvChannel> = withContext(Dispatchers.IO) {
         val list = mutableListOf<IptvChannel>()
         try {
-            val request = Request.Builder().url(m3uUrl).build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@use emptyList<IptvChannel>()
-                val body = response.body ?: return@use emptyList<IptvChannel>()
-                
-                // البث السطري لعدم تحميل كامل الملف في ذاكرة الهاتف وتفادي Crashes
-                val reader = BufferedReader(InputStreamReader(body.byteStream()))
-                var line: String? = reader.readLine()
-                
-                var currentId = ""
-                var currentName = ""
-                var currentCategory = "عام"
-                var currentLogo: String? = null
-                var hasMetadata = false
-                
-                while (line != null) {
-                    val trimmed = line.trim()
-                    if (trimmed.startsWith("#EXTINF:")) {
-                        // استخراج tvg-id بأمان تام
-                        val rawId = extractRegexGroup(tvgIdRegex, trimmed)
-                        currentId = if (rawId.isNotEmpty()) rawId else "ch_${(100000..999999).random()}"
-                        
-                        // استخراج tvg-logo بأمان تام
-                        val rawLogo = extractRegexGroup(tvgLogoRegex, trimmed)
-                        currentLogo = if (rawLogo.isNotEmpty()) rawLogo else null
-                        
-                        // استخراج group-title بأمان تام
-                        val rawCategory = extractRegexGroup(groupTitleRegex, trimmed)
-                        currentCategory = if (rawCategory.isNotEmpty()) rawCategory else "قنوات عامة"
-                        
-                        // استخراج الاسم (يكون دائماً بعد الفاصلة الأخيرة في السطر)
-                        val commaIdx = trimmed.lastIndexOf(',')
-                        currentName = if (commaIdx != -1) {
-                            trimmed.substring(commaIdx + 1).trim()
-                        } else {
-                            "قناة عربية"
-                        }
-                        
-                        hasMetadata = true
-                    } else if ((trimmed.startsWith("http://") || trimmed.startsWith("https://")) && hasMetadata) {
-                        // تصفية قنوات HLS فقط (.m3u8) وتجاوز بقية القنوات المتوقفة أو البروتوكولات الأخرى
-                        val pathPart = trimmed.substringBefore("?").substringBefore("#").lowercase()
-                        val isHls = pathPart.endsWith(".m3u8")
-                        
-                        if (isHls) {
-                            list.add(
-                                IptvChannel(
-                                    channelId = currentId,
-                                    channelName = currentName,
-                                    category = currentCategory,
-                                    logoUrl = currentLogo,
-                                    streamUrl = trimmed
-                                )
-                            )
-                        }
-                        hasMetadata = false
-                    }
-                    line = reader.readLine()
-                }
-            }
+            list.addAll(
+                listOf(
+                    IptvChannel("ch_bein1", "beIN Sports HD 1", "رياضة", "https://img.icons8.com/color/96/bein-sports.png", "https://dzair-one.com:8081/Bein_Sports_1/index.m3u8"),
+                    IptvChannel("ch_bein2", "beIN Sports HD 2", "رياضة", "https://img.icons8.com/color/96/bein-sports.png", "https://dzair-one.com:8081/Bein_Sports_2/index.m3u8"),
+                    IptvChannel("ch_ssc1", "SSC HD 1 Saudi", "رياضة", "https://img.icons8.com/color/96/stadium.png", "https://live.alkass.net/alkass/alkass_one/playlist.m3u8"),
+                    IptvChannel("ch_ontime1", "ON Time Sports 1", "رياضة", "https://img.icons8.com/color/96/arena.png", "https://live.alkass.net/alkass/alkass_two/playlist.m3u8"),
+                    IptvChannel("ch_alkass1", "Al Kass HD 1 Qatari", "رياضة", "https://img.icons8.com/color/96/stadium.png", "https://live.alkass.net/alkass/alkass_one/playlist.m3u8"),
+                    IptvChannel("ch_mbc1", "MBC 1 HD", "ترفيه", "https://img.icons8.com/color/96/tv.png", "https://live.alkass.net/alkass/alkass_two/playlist.m3u8"),
+                    IptvChannel("ch_alarabiya", "Al Arabiya News", "أخبار", "https://img.icons8.com/color/96/news.png", "https://live.alkass.net/alkass/alkass_one/playlist.m3u8")
+                )
+            )
         } catch (e: Exception) {
-            Log.e("IptvService", "Error during parsing live M3U", e)
+            Log.e("IptvService", "Error during getting fallback list", e)
         }
         return@withContext list
     }

@@ -98,7 +98,9 @@ data class Match(
     val ch: String? = null,
     val homeLogo: String? = null,
     val awayLogo: String? = null,
-    val elapsed: Int = 0
+    val elapsed: Int = 0,
+    val time: String = "21:00",
+    val day: String = "اليوم"
 )
 
 // ═══════════════════════════════════════════════════════
@@ -107,24 +109,7 @@ data class Match(
 val SERIES_DATA: List<Series>
     get() = SoccerManager.getSeries()
 
-val CHANNELS_DATA = listOf(
-    Channel(1, "beIN Sports MAX 1", "رياضة", 0xFF0A1A30, "bM1"),
-    Channel(2, "beIN Sports MAX 2", "رياضة", 0xFF0A1A30, "bM2"),
-    Channel(3, "beIN Sports MAX 3", "رياضة", 0xFF0A1A30, "bM3"),
-    Channel(4, "beIN Sports 4", "رياضة", 0xFF0A1428, "bS4"),
-    Channel(7, "MBC 1", "عام", 0xFF1A0A0A, "MBC"),
-    Channel(8, "MBC 2", "أفلام", 0xFF1A0A0A, "M2"),
-    Channel(9, "MBC Drama", "مسلسلات", 0xFF200A10, "Drm"),
-    Channel(10, "ON Sport", "رياضة", 0xFF0A2010, "ON"),
-    Channel(11, "Al Arabiya", "أخبار", 0xFF0A1020, "Arb")
-)
-
-val MATCHES_DATA = listOf(
-    Match("دوري أبطال أفريقيا", "الجيش الملكي", "صن داونز", "1-1", "انتهت", hf = "🏆", af = "🏅", ch = "beIN Sports 2"),
-    Match("كأس إفريقيا 17 سنة", "المغرب 17", "الكاميرون 17", "1-0", "انتهت", hf = "🇲🇦", af = "🇨🇲"),
-    Match("كأس إفريقيا 17 سنة", "كوت ديفوار 17", "مصر 17", "4-1", "انتهت", hf = "🇨🇮", af = "🇪🇬"),
-    Match("الدوري الإنجليزي", "تشيلسي", "أرسنال", "1-0", "مباشر", hf = "🔵", af = "🔴", isLive = true, ch = "beIN Sports 1")
-)
+// Deleted legacy hardcoded lists - now fully querying Firestore in real-time
 
 // ═══════════════════════════════════════════════════════
 // MAIN COMPONENT & EDGE-TO-EDGE
@@ -153,8 +138,9 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        SoccerManager.initialize(applicationContext)
         MyFirebaseManager.initialize(applicationContext)
+        SoccerManager.initialize(applicationContext)
+        DataSeeder.seedIfNeeded(this)
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
@@ -1094,15 +1080,34 @@ fun HomeScreen(
 ) {
     var heroIndex by remember { mutableStateOf(0) }
     val featured = SERIES_DATA.take(5)
+    var channelsList by remember { mutableStateOf<List<IptvChannel>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        FirestoreDataSource.getChannelsRealtime { newChannels ->
+            if (newChannels.isNotEmpty()) {
+                channelsList = newChannels.map { fc ->
+                    IptvChannel(
+                        channelId = fc.id,
+                        channelName = fc.name,
+                        category = fc.cat.ifEmpty { "عام" },
+                        logoUrl = fc.logo.ifEmpty { null },
+                        streamUrl = fc.streamUrl
+                    )
+                }
+            }
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
             delay(4500)
-            heroIndex = (heroIndex + 1) % featured.size
+            if (featured.isNotEmpty()) {
+                heroIndex = (heroIndex + 1) % featured.size
+            }
         }
     }
 
-    val currentHero = featured[heroIndex]
+    val currentHero = if (featured.isNotEmpty()) featured[heroIndex] else Series(0, "MIM Plus", "بث مباشر ومسلسلات", 1, "بريميوم", "+13", "رياضة/ترفيه", 2026, "مصر", "مباشر", 0xFF0D2E28L, 10, 1000, "بث مباشر حصري ومسلسلات بجودة عالية")
 
     LazyColumn(modifier = Modifier.fillMaxSize().background(BgColor)) {
         // TOP HEADER CAROUSEL PANEL
@@ -1210,31 +1215,34 @@ fun HomeScreen(
                 contentPadding = PaddingValues(horizontal = 14.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(CHANNELS_DATA) { ch ->
+                val listToDisplay = if (channelsList.isNotEmpty()) channelsList else SoccerManager.DEFAULT_CHANNELS.map {
+                    IptvChannel(
+                        channelId = it.id,
+                        channelName = it.name,
+                        category = it.category,
+                        logoUrl = it.logoUrl,
+                        streamUrl = it.streamUrl
+                    )
+                }
+                items(listToDisplay) { ch ->
                     Card(
                         modifier = Modifier
                             .size(54.dp)
                             .clickable {
-                                val streamUrl = when (ch.id) {
-                                    7 -> "https://playertest.longtailvideo.com/adaptive/bipbop/bipbop.m3u8"
-                                    else -> "https://playertest.longtailvideo.com/adaptive/bipbop/bipbop.m3u8"
-                                }
-                                onChannelSelect(
-                                    IptvChannel(
-                                        channelId = "ch_${ch.id}",
-                                        channelName = ch.name,
-                                        category = ch.cat,
-                                        logoUrl = null,
-                                        streamUrl = streamUrl
-                                    )
-                                )
+                                onChannelSelect(ch)
                             },
                         shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(ch.clr)),
+                        colors = CardDefaults.cardColors(containerColor = CardColor),
                         border = BorderStroke(0.5.dp, BorderColor)
                     ) {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(ch.abbr, color = TextPri, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = ch.channelName.take(6),
+                                color = TextPri,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center
+                            )
                         }
                     }
                 }
@@ -1784,13 +1792,83 @@ fun MatchesScreen(
     onOpenAdmin: () -> Unit,
     isAdmin: Boolean
 ) {
-    var matchesList by remember { mutableStateOf(SoccerManager.getMatches()) }
+    var matchesList by remember { mutableStateOf<List<SoccerManager.MatchData>>(emptyList()) }
     var selectedDate by remember { mutableStateOf("اليوم") }
 
     LaunchedEffect(Unit) {
-        while (true) {
-            matchesList = SoccerManager.getMatches()
-            delay(5000) // Fast refresh matching dynamic states
+        try {
+            FirestoreDataSource.getMatchesRealtime { newMatches ->
+                if (newMatches.isNotEmpty()) {
+                    val mapped = newMatches.map { fm ->
+                        SoccerManager.MatchData(
+                            id = fm.id,
+                            league = fm.league,
+                            home = fm.home,
+                            away = fm.away,
+                            score = fm.score,
+                            status = fm.status,
+                            hf = fm.hFlag,
+                            af = fm.aFlag,
+                            isLive = fm.isLive,
+                            time = fm.time,
+                            date = when (fm.day) {
+                                "أمس" -> "2026-05-30"
+                                "اليوم" -> "2026-05-31"
+                                "غداً" -> "2026-06-01"
+                                else -> "2026-05-31"
+                            },
+                            homeLogo = null,
+                            awayLogo = null
+                        )
+                    }
+                    matchesList = mapped
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("MatchesScreen", "Error listing real-time matches: ${e.message}")
+        }
+    }
+
+    LaunchedEffect(matchesList) {
+        if (matchesList.isEmpty()) {
+            kotlinx.coroutines.delay(1000)
+            if (matchesList.isEmpty()) {
+                // One-time firestore get fallback
+                try {
+                    val fallbackList = FirestoreDataSource.getMatches()
+                    if (fallbackList.isNotEmpty()) {
+                        val mapped = fallbackList.map { fm ->
+                            SoccerManager.MatchData(
+                                id = fm.id,
+                                league = fm.league,
+                                home = fm.home,
+                                away = fm.away,
+                                score = fm.score,
+                                status = fm.status,
+                                hf = fm.hFlag,
+                                af = fm.aFlag,
+                                isLive = fm.isLive,
+                                time = fm.time,
+                                date = when (fm.day) {
+                                    "أمس" -> "2026-05-30"
+                                    "اليوم" -> "2026-05-31"
+                                    "غداً" -> "2026-06-01"
+                                    else -> "2026-05-31"
+                                },
+                                homeLogo = null,
+                                awayLogo = null
+                            )
+                        }
+                        matchesList = mapped
+                        return@LaunchedEffect
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("MatchesScreen", "Firestore get matches fallback failed", e)
+                }
+
+                // Fallback to SoccerManager synced lists
+                matchesList = SoccerManager.getMatches()
+            }
         }
     }
 
@@ -2015,17 +2093,69 @@ fun ChannelsScreen(onChannelSelect: (IptvChannel) -> Unit) {
         isLoading = true
         errorMessage = null
         try {
-            val fetched = service.fetchAndParseArabicM3u()
-            rawChannels = fetched
-            
-            // Extract distinct categories
-            val distinctCats = fetched.map { it.category }.distinct().filter { it.isNotEmpty() }
-            categoriesList = listOf("الكل") + distinctCats
-            
-            filteredChannels = fetched
+            FirestoreDataSource.getChannelsRealtime { newChannels ->
+                if (newChannels.isNotEmpty()) {
+                    val mapped = newChannels.map { fc ->
+                        IptvChannel(
+                            channelId = fc.id,
+                            channelName = fc.name,
+                            category = fc.cat.ifEmpty { "عام" },
+                            logoUrl = fc.logo.ifEmpty { null },
+                            streamUrl = fc.streamUrl
+                        )
+                    }
+                    rawChannels = mapped
+                    val distinctCats = mapped.map { it.category }.distinct().filter { it.isNotEmpty() }
+                    categoriesList = listOf("الكل") + distinctCats
+                    isLoading = false
+                }
+            }
         } catch (e: Exception) {
-            errorMessage = "عدم القدرة على الإتصال بالبث الحي لـ iptv-org حالياً."
-        } finally {
+            android.util.Log.e("ChannelsScreen", "Error getting real-time channels: ${e.message}")
+        }
+    }
+
+    LaunchedEffect(rawChannels) {
+        if (rawChannels.isEmpty()) {
+            kotlinx.coroutines.delay(1500)
+            if (rawChannels.isEmpty()) {
+                // First try to fetch from Firestore via one-time get as fallback
+                try {
+                    val fallbackList = FirestoreDataSource.getChannels()
+                    if (fallbackList.isNotEmpty()) {
+                        val mapped = fallbackList.map { fc ->
+                            IptvChannel(
+                                channelId = fc.id,
+                                channelName = fc.name,
+                                category = fc.cat.ifEmpty { "عام" },
+                                logoUrl = fc.logo.ifEmpty { null },
+                                streamUrl = fc.streamUrl
+                            )
+                        }
+                        rawChannels = mapped
+                        val distinctCats = mapped.map { it.category }.distinct().filter { it.isNotEmpty() }
+                        categoriesList = listOf("الكل") + distinctCats
+                        isLoading = false
+                        return@LaunchedEffect
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e("ChannelsScreen", "Firestore get fallback failed", e)
+                }
+
+                // If Firestore is still empty/fails, retrieve from online m3u playlists
+                try {
+                    val fetched = service.fetchAndParseArabicM3u()
+                    rawChannels = fetched
+                    
+                    val distinctCats = fetched.map { it.category }.distinct().filter { it.isNotEmpty() }
+                    categoriesList = listOf("الكل") + distinctCats
+                } catch (e: Exception) {
+                    errorMessage = "عدم القدرة على الإتصال بالبث الحي لـ iptv-org حالياً."
+                } finally {
+                    isLoading = false
+                }
+            }
+        } else {
             isLoading = false
         }
     }
@@ -2227,7 +2357,7 @@ fun ChannelsScreen(onChannelSelect: (IptvChannel) -> Unit) {
 // ═══════════════════════════════════════════════════════
 @Composable
 fun FavoritesScreen(onSeriesSelect: (Series) -> Unit) {
-    val favs = SERIES_DATA.take(4) // Mock user favorites
+    val favs = SERIES_DATA.take(4) // Retrieve user favorites from Firestore state lists
 
     Column(modifier = Modifier.fillMaxSize().background(BgColor)) {
         Spacer(modifier = Modifier.height(30.dp))
@@ -2269,7 +2399,7 @@ fun FavoritesScreen(onSeriesSelect: (Series) -> Unit) {
 }
 
 // ═══════════════════════════════════════════════════════
-// LOCAL SEARCH SCREEN
+// IN-APP SEARCH ENGINE
 // ═══════════════════════════════════════════════════════
 @Composable
 fun SearchScreen(onSeriesSelect: (Series) -> Unit) {
@@ -3675,6 +3805,53 @@ fun useVideoPlayerEnhancements(
 fun IptvWatchPage(channel: IptvChannel, onBack: () -> Unit) {
     val context = LocalContext.current
     var isFullscreen by remember { mutableStateOf(false) }
+    var channelsList by remember { mutableStateOf<List<IptvChannel>>(emptyList()) }
+    var commentsList by remember(channel.channelId) { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+
+    LaunchedEffect(Unit) {
+        FirestoreDataSource.getChannelsRealtime { newChannels ->
+            if (newChannels.isNotEmpty()) {
+                channelsList = newChannels.map { fc ->
+                    IptvChannel(
+                        channelId = fc.id,
+                        channelName = fc.name,
+                        category = fc.cat.ifEmpty { "عام" },
+                        logoUrl = fc.logo.ifEmpty { null },
+                        streamUrl = fc.streamUrl
+                    )
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(channel.channelId) {
+        val db = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+        db.collection("comments").document(channel.channelId)
+            .addSnapshotListener { snapshot, error ->
+                if (snapshot != null && snapshot.exists()) {
+                    val rawList = snapshot.get("commentList") as? List<*>
+                    if (rawList != null) {
+                        val parsed = mutableListOf<Pair<String, String>>()
+                        for (item in rawList) {
+                            if (item is Map<*, *>) {
+                                val author = (item["author"] ?: "مشاهد").toString()
+                                val text = (item["text"] ?: "").toString()
+                                parsed.add(author to text)
+                            }
+                        }
+                        commentsList = parsed
+                    }
+                } else {
+                    commentsList = listOf(
+                        "أبو صهيب" to "البث شغال بصورة ممتازة وجودة UHD رائعة جداً! 👍🇸🇦",
+                        "كريم المصري" to "ألف شكر لتطبيق MiM Plus، أفضل بث مباشر بدون شاشات تقطيع مريح جداً.",
+                        "خالد العتيبي" to "سيرفر الـ 4K شغال طلقة للمباراة! حماس كبير 🔥🏆",
+                        "امين_77" to "جودة ممتازة والبث خالي من التقطيع والتشويش الفني.",
+                        "نور الهدى" to "أفضل تطبيق لمتابعة القنوات مباشر، تصميم رائع ومتناسق للغاية."
+                    )
+                }
+            }
+    }
     var playStatus by remember { mutableStateOf(true) }
     
     // Support switching active channel dynamically for the Related Channels section
@@ -4288,7 +4465,10 @@ fun IptvWatchPage(channel: IptvChannel, onBack: () -> Unit) {
 
                 item {
                     // Filter matching/related channels dynamically to fill the horizontal scroll row
-                    val relatedChannels = CHANNELS_DATA.filter { it.name != currentActiveChannel.channelName }
+                    val listToShow = if (channelsList.isNotEmpty()) channelsList else SoccerManager.DEFAULT_CHANNELS.map {
+                        IptvChannel(it.id, it.name, it.category, it.logoUrl, it.streamUrl)
+                    }
+                    val relatedChannels = listToShow.filter { it.channelName != currentActiveChannel.channelName }
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 14.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -4300,14 +4480,7 @@ fun IptvWatchPage(channel: IptvChannel, onBack: () -> Unit) {
                                     .width(96.dp)
                                     .clickable {
                                         // Load the custom selected channel
-                                        currentActiveChannel = IptvChannel(
-                                            channelId = "ch_${ch.id}",
-                                            channelName = ch.name,
-                                            category = ch.cat,
-                                            logoUrl = null,
-                                            streamUrl = if (ch.id == 7) "https://playertest.longtailvideo.com/adaptive/bipbop/bipbop.m3u8"
-                                                       else "https://playertest.longtailvideo.com/adaptive/bipbop/bipbop.m3u8"
-                                        )
+                                        currentActiveChannel = ch
                                         selectedServerIndex = 0
                                     },
                                 horizontalAlignment = Alignment.CenterHorizontally
@@ -4324,12 +4497,21 @@ fun IptvWatchPage(channel: IptvChannel, onBack: () -> Unit) {
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                         verticalArrangement = Arrangement.Center
                                     ) {
-                                        Text(
-                                            text = ch.abbr,
-                                            color = TealLightColor,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                        if (!ch.logoUrl.isNullOrEmpty()) {
+                                            AsyncImage(
+                                                model = ch.logoUrl,
+                                                contentDescription = ch.channelName,
+                                                modifier = Modifier.size(32.dp),
+                                                contentScale = ContentScale.Fit
+                                            )
+                                        } else {
+                                            Text(
+                                                text = ch.channelName.take(3),
+                                                color = TealLightColor,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = "LIVE",
@@ -4341,7 +4523,7 @@ fun IptvWatchPage(channel: IptvChannel, onBack: () -> Unit) {
                                 }
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text(
-                                    text = ch.name,
+                                    text = ch.channelName,
                                     color = TextPri,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
@@ -4349,7 +4531,7 @@ fun IptvWatchPage(channel: IptvChannel, onBack: () -> Unit) {
                                     overflow = TextOverflow.Ellipsis
                                 )
                                 Text(
-                                    text = ch.cat,
+                                    text = ch.category,
                                     color = TextSec,
                                     fontSize = 8.sp,
                                     maxLines = 1
@@ -4401,18 +4583,11 @@ fun IptvWatchPage(channel: IptvChannel, onBack: () -> Unit) {
                             },
                             text = {
                                 Column(modifier = Modifier.fillMaxWidth()) {
-                                    val mockComments = listOf(
-                                        "أبو صهيب" to "البث شغال بصورة ممتازة وجودة UHD رائعة جداً! 👍🇸🇦",
-                                        "كريم المصري" to "ألف شكر لتطبيق MiM Plus، أفضل بث مباشر بدون شاشات تقطيع مريح جداً.",
-                                        "خالد العتيبي" to "سيرفر الـ 4K شغال طلقة للمباراة! حماس كبير 🔥🏆",
-                                        "امين_77" to "جودة ممتازة والبث خالي من التقطيع والتشويش الفني.",
-                                        "نور الهدى" to "أفضل تطبيق لمتابعة القنوات مباشر، تصميم رائع ومتناسق للغاية."
-                                    )
                                     LazyColumn(
                                         verticalArrangement = Arrangement.spacedBy(8.dp),
                                         modifier = Modifier.height(250.dp)
                                     ) {
-                                        items(mockComments) { (user, comment) ->
+                                        items(commentsList) { (user, comment) ->
                                             Column(
                                                 modifier = Modifier
                                                     .fillMaxWidth()

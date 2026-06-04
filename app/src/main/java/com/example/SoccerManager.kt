@@ -208,15 +208,20 @@ object SoccerManager {
                                     away = doc.getString("away") ?: "",
                                     score = doc.getString("score") ?: "",
                                     status = doc.getString("status") ?: "",
-                                    hf = doc.getString("hf") ?: "⚽",
-                                    af = doc.getString("af") ?: "⚽",
+                                    hf = doc.getString("hf") ?: doc.getString("hFlag") ?: "⚽",
+                                    af = doc.getString("af") ?: doc.getString("aFlag") ?: "⚽",
                                     isLive = doc.getBoolean("isLive") ?: doc.getBoolean("live") ?: false,
                                     ch = doc.getString("ch") ?: "",
                                     homeLogo = doc.getString("homeLogo"),
                                     awayLogo = doc.getString("awayLogo"),
                                     elapsed = doc.getLong("elapsed")?.toInt() ?: 0,
                                     round = doc.getString("round") ?: "",
-                                    date = doc.getString("date") ?: "",
+                                    date = doc.getString("date") ?: when (doc.getString("day")) {
+                                        "أمس" -> "2026-05-30"
+                                        "اليوم" -> "2026-05-31"
+                                        "غداً" -> "2026-06-01"
+                                        else -> "2026-05-31"
+                                    },
                                     time = doc.getString("time") ?: "",
                                     stadium = doc.getString("stadium") ?: "",
                                     referee = doc.getString("referee") ?: "",

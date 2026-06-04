@@ -21,15 +21,21 @@ object MyFirebaseManager {
                 .setStorageBucket("mimpro-3b84d.firebasestorage.app")
                 .build()
 
-            if (FirebaseApp.getApps(context).isEmpty()) {
-                FirebaseApp.initializeApp(context, options)
+            val apps = try {
+                FirebaseApp.getApps(context)
+            } catch (t: Throwable) {
+                emptyList()
+            }
+
+            if (apps.isEmpty()) {
+                FirebaseApp.initializeApp(context.applicationContext, options)
                 Log.d(TAG, "Firebase pre-configured and initialized successfully.")
             } else {
                 Log.d(TAG, "Firebase App already exists.")
             }
             isInitialized = true
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to initialize custom FirebaseApp", e)
+        } catch (e: Throwable) {
+            Log.e(TAG, "Failed to initialize custom FirebaseApp: ${e.message}", e)
         }
     }
 
