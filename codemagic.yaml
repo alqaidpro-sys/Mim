@@ -1,18 +1,44 @@
 workflows:
   android-workflow:
-    name: MiM Android Build
+    name: Android Build
     max_build_duration: 60
     instance_type: mac_mini_m1
+    environment:
+      android_sdk: 34
+      gradle: stable
     triggering:
       events:
         - push
+        - pull_request
+      branch_patterns:
+        - pattern: '*'
+          include: true
     scripts:
-      - name: Install Correct Gradle Wrapper
-        script: gradle wrapper --gradle-version 9.3.1
-      - name: Set up local properties
-        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-      - name: Build Android Debug APK
-        script: ./gradlew assembleDebug
+      - name: Decode Debug Keystore
+        script: |
+          if [ -f debug.keystore.base64 ] || [ -f app/debug.keystore.base64 ]; then
+            FILE_PATH="debug.keystore.base64"
+            [ -f app/debug.keystore.base64 ] && FILE_PATH="app/debug.keystore.base64"
+            echo "Decoding $FILE_PATH..."
+            if base64 --decode "$FILE_PATH" > debug.keystore 2>/dev/null; then
+              echo "Decoded successfully using --decode."
+            elif base64 -D "$FILE_PATH" > debug.keystore 2>/dev/null; then
+              echo "Decoded successfully using -D."
+            else
+              echo "Failed to decode. Generating debug.keystore using keytool..."
+              keytool -genkeypair -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -storepass android -keypass android
+            fi
+          else
+            echo "Keystore base64 missing. Generating fallback debug.keystore using keytool..."
+            keytool -genkeypair -v -keystore debug.keystore -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -storepass android -keypass android
+          fi
+          # Ensure it matches standard root path expected by build script
+          cp debug.keystore app/debug.keystore 2>/dev/null || true
+      - name: Update Gradle Wrapper Version
+        script: |
+          gradle wrapper --gradle-version 9.3.1
+      - name: Build Android App (assembleDebug)
+        script: |
+          ./gradlew assembleDebug
     artifacts:
-      - '**/build/outputs/apk/debug/*.apk'
-      - 'app/build/outputs/apk/debug/*.apk'
+      - app/build/outputs/apk/**/*.apk
